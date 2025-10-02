@@ -4197,8 +4197,13 @@ app.get('/api/patients/:patientId/iop-measurements', authDoctor, async (req, res
     };
 
     if (measurements.length > 0) {
-      const leftValues = measurements.filter(m => m.left_eye_iop !== null).map(m => m.left_eye_iop);
-      const rightValues = measurements.filter(m => m.right_eye_iop !== null).map(m => m.right_eye_iop);
+      const leftValues = measurements
+        .filter(m => m.left_eye_iop !== null)
+        .map(m => parseFloat(m.left_eye_iop)); // เพิ่ม parseFloat
+      
+      const rightValues = measurements
+        .filter(m => m.right_eye_iop !== null)
+        .map(m => parseFloat(m.right_eye_iop)); // เพิ่ม parseFloat
 
       if (leftValues.length > 0) {
         stats.average_left = (leftValues.reduce((a, b) => a + b, 0) / leftValues.length).toFixed(1);
@@ -4212,6 +4217,12 @@ app.get('/api/patients/:patientId/iop-measurements', authDoctor, async (req, res
         stats.min_right = Math.min(...rightValues);
       }
     }
+
+    console.log('✅ Sending response:', {
+      measurements_count: measurements.length,
+      stats: stats,
+      sample_measurement: measurements[0]
+    });
 
     res.json({
       measurements,
