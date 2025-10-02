@@ -4630,12 +4630,138 @@ app.get('/api/appointments/upcoming', authDoctor, async (req, res) => {
   }
 });
 
+
+
 console.log('✅ Appointment management endpoints added successfully');
 console.log('🔧 Available appointment endpoints:');
 console.log('   GET /api/appointments - Get all appointments');
 console.log('   POST /api/appointments - Create new appointment');
 console.log('   PUT /api/appointments/:id - Update appointment');
 console.log('   GET /api/appointments/upcoming - Get upcoming appointments');
+
+// GET single IOP measurement for editing - เพิ่มใหม่
+app.get('/api/iop-measurements/:measurementId', authDoctor, async (req, res) => {
+  try {
+    const measurementId = req.params.measurementId;
+    const doctorId = req.doctor.doctor_id;
+
+    const [measurement] = await pool.execute(
+      `SELECT iop.measurement_id, iop.measurement_date, iop.measurement_time,
+              iop.left_eye_iop, iop.right_eye_iop, iop.measurement_method, 
+              iop.notes, iop.patient_id,
+              CONCAT(d.first_name, ' ', d.last_name) as measured_by
+       FROM IOP_Measurements iop
+       LEFT JOIN DoctorProfiles d ON iop.doctor_id = d.doctor_id
+       WHERE iop.measurement_id = ? AND iop.doctor_id = ?`,
+      [measurementId, doctorId]
+    );
+
+    if (measurement.length === 0) {
+      return res.status(404).json({ error: 'IOP measurement not found or unauthorized' });
+    }
+
+    res.json(measurement[0]);
+
+  } catch (error) {
+    console.error('❌ Error loading IOP measurement:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// PUT update IOP measurement - เพิ่มใหม่
+app.put('/api/iop-measurements/:measurementId', authDoctor, async (req, res) => {
+  try {
+    const measurementId = req.params.measurementId;
+    const doctorId = req.doctor.doctor_id;
+    
+    const {
+      measurementDate,
+      measurementTime,
+      leftEyeIOP,
+      rightEyeIOP,
+      measurementMethod,
+      notes
+    } = req.body;
+
+    console.log('📝 Updating IOP measurement:', measurementId);
+
+    // ตรวจสอบว่า measurement มีอยู่และเป็นของหมอคนนี้
+    const [existing] = await pool.execute(
+      'SELECT measurement_id, patient_id FROM IOP_Measurements WHERE measurement_id = ? AND doctor_id = ?',
+      [measurementId, doctorId]
+    );
+
+    if (existing.length === 0) {
+      return res.status(404).json({ error: 'IOP measurement not found or unauthorized' });
+    }
+
+    // Validation
+    if (!measurementDate || (!leftEyeIOP && !rightEyeIOP)) {
+      return res.status(400).json({ error: 'Measurement date and at least one IOP value are required' });
+    }
+
+    // อัพเดต measurement
+    await pool.execute(
+      `UPDATE IOP_Measurements 
+      SET measurement_date = ?, measurement_time = ?, 
+          left_eye_iop = ?, right_eye_iop = ?, 
+          measurement_method = ?, notes = ?
+      WHERE measurement_id = ? AND doctor_id = ?`,
+      [
+        measurementDate,
+        measurementTime || '00:00:00',
+        leftEyeIOP ? parseFloat(leftEyeIOP) : null,
+        rightEyeIOP ? parseFloat(rightEyeIOP) : null,
+        measurementMethod || 'GAT',
+        notes || null,
+        measurementId,
+        doctorId
+      ]
+    );
+
+    res.json({ 
+      message: 'IOP measurement updated successfully',
+      measurement_id: measurementId 
+    });
+
+  } catch (error) {
+    console.error('❌ Error updating IOP measurement:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+console.log('✅ Additional IOP management endpoints added');
+
+// GET single IOP measurement for editing - เพิ่มใหม่
+app.get('/api/iop-measurements/:measurementId', authDoctor, async (req, res) => {
+  try {
+    const measurementId = req.params.measurementId;
+    const doctorId = req.doctor.doctor_id;
+
+    const [measurement] = await pool.execute(
+      `SELECT iop.measurement_id, iop.measurement_date, iop.measurement_time,
+              iop.left_eye_iop, iop.right_eye_iop, iop.measurement_method, 
+              iop.notes, iop.patient_id,
+              CONCAT(d.first_name, ' ', d.last_name) as measured_by
+       FROM IOP_Measurements iop
+       LEFT JOIN DoctorProfiles d ON iop.doctor_id = d.doctor_id
+       WHERE iop.measurement_id = ? AND iop.doctor_id = ?`,
+      [measurementId, doctorId]
+    );
+
+    if (measurement.length === 0) {
+      return res.status(404).json({ error: 'IOP measurement not found or unauthorized' });
+    }
+
+    res.json(measurement[0]);
+
+  } catch (error) {
+    console.error('❌ Error loading IOP measurement:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+
 
 // ===========================================
 // ERROR HANDLING MIDDLEWARE
