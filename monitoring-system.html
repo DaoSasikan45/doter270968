@@ -1570,7 +1570,7 @@
         // API Helper Functions
         async function apiCall(endpoint, options = {}) {
             try {
-                showLoadingOverlay(`กำลังเชื่อมต่อ API: ${endpoint}...`);
+                showLoadingOverlay('กำลังโหลดข้อมูล...');
                 
                 const isFormData = options.body instanceof FormData;
                 const headers = {
@@ -2059,7 +2059,6 @@
             }
         }
 
-        // Alerts Functions
         async function loadAlerts() {
             if (!checkAuth()) return;
             
@@ -2069,32 +2068,45 @@
             alertsListContainer.innerHTML = `<div class="loading"><i class="fas fa-spinner"></i> กำลังโหลดการแจ้งเตือน...</div>`;
             
             try {
-                const alerts = await apiCall('/adherence-alerts');
+                const response = await apiCall('/medication/alerts');
+                
+                // รวมข้อมูลจากทุก status
+                const overdue = response?.data?.overdue || [];
+                const pending = response?.data?.pending || [];
+                const allAlerts = [...overdue, ...pending];
 
-                if (!alerts || alerts.length === 0) {
+                if (allAlerts.length === 0) {
                     alertsListContainer.innerHTML = getEmptyAlertsHTML();
                     alertCountEl.textContent = '0';
                     return;
                 }
                 
-                const pendingAlerts = alerts.filter(a => a.status === 'pending');
-                alertCountEl.textContent = pendingAlerts.length;
+                alertCountEl.textContent = allAlerts.length;
                 
                 let html = '';
-                alerts.forEach(alert => {
-                    let alertClass = 'alert-low';
-                    let alertIcon = 'fa-info-circle';
-                    let alertColor = '#3498db';
+                allAlerts.forEach(alert => {
+                    const isOverdue = alert.taken_status === 'overdue' || alert.status === 'overdue';
+                    const alertClass = isOverdue ? 'alert-high' : 'alert-medium';
+                    const alertIcon = isOverdue ? 'fa-exclamation-triangle' : 'fa-bell';
+                    const alertColor = isOverdue ? '#e74c3c' : '#f39c12';
+                    const statusText = isOverdue ? 'เลยกำหนด' : 'รอหยอดยา';
                     
-                    if (alert.severity === 'high') {
-                        alertClass = 'alert-high';
-                        alertIcon = 'fa-exclamation-triangle';
-                        alertColor = '#e74c3c';
-                    } else if (alert.severity === 'medium') {
-                        alertClass = 'alert-medium';
-                        alertIcon = 'fa-exclamation-circle';
-                        alertColor = '#f39c12';
-                    }
+                    // แปลง frequency เป็นภาษาไทย
+                    const frequencyMap = {
+                        'once_daily': 'วันละ 1 ครั้ง',
+                        'twice_daily': 'วันละ 2 ครั้ง',
+                        'three_times_daily': 'วันละ 3 ครั้ง',
+                        'four_times_daily': 'วันละ 4 ครั้ง'
+                    };
+                    const frequencyText = frequencyMap[alert.frequency] || alert.frequency;
+                    
+                    // แปลงตา
+                    const eyeMap = {
+                        'left': 'ตาซ้าย',
+                        'right': 'ตาขวา',
+                        'both': 'ทั้งสองตา'
+                    };
+                    const eyeText = eyeMap[alert.eye_selection] || '';
 
                     html += `
                         <div class="alert-item ${alertClass}">
@@ -2102,18 +2114,11 @@
                                 <div class="alert-message">
                                     <div class="alert-text">
                                         <i class="fas ${alertIcon}" style="color: ${alertColor}; margin-right: 0.5rem;"></i>
-                                        ${alert.patient_name ? `ผู้ป่วย: ${alert.patient_name}` : 'การแจ้งเตือนทั่วไป'}
+                                        <strong>${statusText}:</strong> ${alert.medication_name} (${alert.dosage} หยด)
                                     </div>
                                     <div class="alert-detail">
-                                        ${alert.message} - ${new Date(alert.alert_date).toLocaleString('th-TH')}
+                                        ${eyeText} • ${frequencyText} • ผู้ป่วย: ${alert.patient_name}
                                     </div>
-                                </div>
-                                <div class="alert-actions">
-                                    ${alert.status === 'pending' ? `
-                                        <button class="btn-resolve" onclick="resolveAlert('${alert.alert_id}')">
-                                            แก้ไขแล้ว
-                                        </button>
-                                    ` : ''}
                                 </div>
                             </div>
                         </div>
@@ -2123,6 +2128,7 @@
                 alertsListContainer.innerHTML = html;
 
             } catch (error) {
+                console.error('Error loading alerts:', error);
                 showError('ไม่สามารถโหลดการแจ้งเตือนได้');
                 alertsListContainer.innerHTML = getEmptyAlertsHTML();
                 alertCountEl.textContent = '0';
