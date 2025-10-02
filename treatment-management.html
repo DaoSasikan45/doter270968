@@ -947,6 +947,149 @@
             background: #6c757d;
             cursor: not-allowed;
         }
+        
+        
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 10000;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(8px);
+            animation: modalFadeIn 0.3s ease-out;
+        }
+
+        .modal.show {
+            display: flex;
+        }
+
+        .modal-container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.25);
+            max-width: 650px;
+            width: 90%;
+            max-height: 85vh;
+            overflow: hidden;
+            animation: modalSlideIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        .modal-header {
+            padding: 2rem 2.5rem 1.5rem;
+            background: linear-gradient(135deg, #1bc5bd 0%, #17a2b8 100%);
+            color: white;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-title {
+            margin: 0;
+            font-size: 1.4rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .modal-close {
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            color: white;
+            font-size: 1.3rem;
+            cursor: pointer;
+            padding: 0.6rem;
+            border-radius: 50%;
+            transition: all 0.2s ease;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-close:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: rotate(90deg);
+        }
+
+        .modal-body {
+            padding: 2.5rem;
+            max-height: 60vh;
+            overflow-y: auto;
+        }
+
+        .modal-footer {
+            padding: 1.5rem 2.5rem 2rem;
+            background: #f8f9fa;
+            display: flex;
+            gap: 1rem;
+            justify-content: flex-end;
+        }
+
+        .record-actions {
+            padding: 1.25rem 1.75rem;
+            background: linear-gradient(135deg, #fafbfc 0%, #f1f3f4 100%);
+            border-top: 1px solid #e5e7eb;
+            display: flex;
+            gap: 1rem;
+            justify-content: flex-end;
+        }
+
+        .btn-edit, .btn-delete {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 10px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            min-width: 110px;
+            justify-content: center;
+        }
+
+        .btn-edit {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+        }
+
+        .btn-edit:hover {
+            background: linear-gradient(135deg, #059669 0%, #047857 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(16, 185, 129, 0.4);
+        }
+
+        .btn-delete {
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+            color: white;
+            box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+        }
+
+        .btn-delete:hover {
+            background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(239, 68, 68, 0.4);
+        }
+
+        @keyframes modalFadeIn {
+            from { opacity: 0; backdrop-filter: blur(0px); }
+            to { opacity: 1; backdrop-filter: blur(8px); }
+        }
+
+        @keyframes modalSlideIn {
+            from { opacity: 0; transform: scale(0.8) translateY(-50px); }
+            to { opacity: 1; transform: scale(1) translateY(0); }
+        }
+
     </style>
 </head>
 <body>
@@ -2360,6 +2503,10 @@
                 });
 
                 if (!response.ok) {
+                    // ⭐ เพิ่มส่วนนี้เพื่อดู error message จาก backend
+                    const errorData = await response.json().catch(() => null);
+                    console.error('❌ API Error Response:', errorData);
+                    
                     if (response.status === 401) {
                         showToast('เซสชันหมดอายุ กรุณาเข้าสู่ระบบใหม่', 'error');
                         setTimeout(() => {
@@ -2367,7 +2514,7 @@
                         }, 2000);
                         return null;
                     }
-                    throw new Error(`HTTP error! status: ${response.status}`);
+                    throw new Error(errorData?.message || `HTTP error! status: ${response.status}`);
                 }
 
                 return await response.json();
@@ -2918,29 +3065,40 @@
                 `;
             }
 
-            // Show measurements timeline
+            // Show measurements timeline WITH ACTION BUTTONS
             html += '<div class="timeline">';
             measurements.forEach(measurement => {
                 html += `
-                    <div class="timeline-item">
+                    <div class="timeline-item" data-measurement-id="${measurement.measurement_id}">
                         <div class="record-header">
                             <span class="record-date">${formatDate(measurement.measurement_date)} ${measurement.measurement_time || ''}</span>
                             <span class="record-type">IOP</span>
                         </div>
                         <div class="record-content">
-                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
                                 <div>
-                                    <strong>ตาขวา:</strong> ${measurement.right_eye_iop || 'N/A'} mmHg
+                                    <strong>ตาขวา:</strong> ${measurement.right_eye_iop || 'N/A'} ${measurement.right_eye_iop ? 'mmHg' : ''}
                                     ${measurement.right_eye_iop > 21 ? '<span style="color: var(--danger); font-weight: bold;"> (สูง)</span>' : ''}
                                 </div>
                                 <div>
-                                    <strong>ตาซ้าย:</strong> ${measurement.left_eye_iop || 'N/A'} mmHg
+                                    <strong>ตาซ้าย:</strong> ${measurement.left_eye_iop || 'N/A'} ${measurement.left_eye_iop ? 'mmHg' : ''}
                                     ${measurement.left_eye_iop > 21 ? '<span style="color: var(--danger); font-weight: bold;"> (สูง)</span>' : ''}
                                 </div>
                             </div>
-                            ${measurement.measurement_device ? `<p><strong>เครื่องมือ:</strong> ${measurement.measurement_device}</p>` : ''}
+                            ${measurement.measurement_method ? `<p><strong>วิธีการวัด:</strong> ${measurement.measurement_method}</p>` : ''}
                             ${measurement.notes ? `<p><strong>หมายเหตุ:</strong> ${measurement.notes}</p>` : ''}
-                            ${measurement.recorded_by_name ? `<p><strong>ผู้บันทึก:</strong> ${measurement.recorded_by_name}</p>` : ''}
+                            ${measurement.measured_by ? `<p><strong>ผู้บันทึก:</strong> ${measurement.measured_by}</p>` : ''}
+                        </div>
+                        
+                        <div class="record-actions">
+                            <button class="btn-edit" onclick="editIOPRecord('${measurement.measurement_id}')">
+                                <i class="fas fa-edit"></i>
+                                <span>แก้ไข</span>
+                            </button>
+                            <button class="btn-delete" onclick="deleteIOPMeasurement('${measurement.measurement_id}', '${measurement.measurement_date}', ${measurement.left_eye_iop || 'null'}, ${measurement.right_eye_iop || 'null'})">
+                                <i class="fas fa-trash"></i>
+                                <span>ลบ</span>
+                            </button>
                         </div>
                     </div>
                 `;
@@ -2949,6 +3107,253 @@
 
             container.innerHTML = html;
         }
+        async function editIOPRecord(measurementId) {
+            try {
+                console.log('📝 Editing IOP record:', measurementId);
+                showToast('กำลังโหลดข้อมูลสำหรับแก้ไข...', 'info');
+                
+                const response = await apiCall(`/iop-measurements/${measurementId}`);
+                
+                console.log('📦 API Response:', response);
+                
+                if (response) {
+                    // เปิด modal ก่อน
+                    showEditModal();
+                    // รอ modal เปิดเสร็จ แล้วค่อย populate
+                    setTimeout(() => {
+                        populateEditIOPForm(response);
+                        // ตรวจสอบค่าหลัง populate
+                        setTimeout(() => {
+                            console.log('🔍 Variable after populate:', currentEditingMeasurementId);
+                            console.log('🔍 Input after populate:', document.getElementById('editMeasurementId')?.value);
+                        }, 150);
+                    }, 150);
+                } else {
+                    console.error('❌ No response from API');
+                    showToast('ไม่พบข้อมูลการวัด', 'error');
+                }
+                
+            } catch (error) {
+                console.error('❌ Failed to load measurement for edit:', error);
+                showToast('ไม่สามารถโหลดข้อมูลได้', 'error');
+            }
+        }
+
+        let currentEditingMeasurementId = null;
+        function populateEditIOPForm(measurement) {
+        console.log('📋 Populating IOP edit form with:', measurement);
+        
+        currentEditingMeasurementId = measurement.measurement_id;
+        console.log('💾 Saved to variable:', currentEditingMeasurementId);
+        
+        setTimeout(() => {
+            const measurementIdInput = document.getElementById('editMeasurementId');
+            if (!measurementIdInput) {
+                console.error('❌ Cannot find editMeasurementId input!');
+                alert('ไม่พบฟอร์มแก้ไข กรุณารีเฟรชหน้า');
+                return;
+            }
+            console.log('📍 Input element found:', measurementIdInput);
+            measurementIdInput.value = String(measurement.measurement_id || '');
+            console.log('✅ Set editMeasurementId to:', measurementIdInput.value);
+
+            // แปลงวันที่
+            if (measurement.measurement_date) {
+                const date = new Date(measurement.measurement_date);
+                const year = date.getFullYear();
+                const month = String(date.getMonth() + 1).padStart(2, '0');
+                const day = String(date.getDate()).padStart(2, '0');
+                document.getElementById('editMeasurementDate').value = `${year}-${month}-${day}`;
+            }
+
+            document.getElementById('editMeasurementTime').value = measurement.measurement_time || '';
+            document.getElementById('editRightEyeIOP').value = measurement.right_eye_iop || '';
+            document.getElementById('editLeftEyeIOP').value = measurement.left_eye_iop || '';
+            document.getElementById('editMeasurementMethod').value = measurement.measurement_method || 'GAT';
+            document.getElementById('editNotes').value = measurement.notes || '';
+
+            console.log('✅ IOP Form populated successfully');
+        }, 100);
+    }
+
+        async function saveEditedIOP() {
+            // ป้องกันการเรียกซ้ำ
+            if (window.isSaving) {
+                console.log('⚠️ Already saving, please wait...');
+                return;
+            }
+            window.isSaving = true;
+            
+            try {
+                // ดึงค่า Measurement ID จาก input ก่อน
+                const measurementIdElement = document.getElementById('editMeasurementId');
+                let measurementId = measurementIdElement?.value;
+                measurementId = String(measurementId || '');
+                console.log('🔍 Element:', measurementIdElement);
+                console.log('🔍 Element exists?', measurementIdElement !== null);
+                console.log('🔍 Measurement ID from input:', measurementId);
+                // ถ้า input ว่าง ให้ใช้ค่าจาก variable
+                if (!measurementId || measurementId.trim() === '') {
+                    console.log('⚠️ Input is empty, getting ID from variable instead');
+                    measurementId = String(currentEditingMeasurementId || '');
+                    console.log('🔍 Using ID from variable:', measurementId);
+                }
+                console.log('🔍 Final Measurement ID:', measurementId);
+                console.log('🔍 Measurement ID type:', typeof measurementId);
+                console.log('🔍 Measurement ID length:', measurementId.length);
+                // ตรวจสอบว่ามี Measurement ID หรือไม่
+                if (!measurementId || measurementId.trim() === '') {
+                    console.error('❌ Measurement ID is empty or invalid!');
+                    alert('ไม่พบรหัสการวัด กรุณาปิดและเปิดฟอร์มใหม่');
+                    window.isSaving = false;
+                    return;
+                }
+                
+                // ดึงข้อมูลจาก form
+                const leftEyeIOP = document.getElementById('editLeftEyeIOP')?.value;
+                const rightEyeIOP = document.getElementById('editRightEyeIOP')?.value;
+                const measurementDate = document.getElementById('editMeasurementDate')?.value;
+                const measurementTime = document.getElementById('editMeasurementTime')?.value;
+                const measurementMethod = document.getElementById('editMeasurementMethod')?.value;
+                const notes = document.getElementById('editNotes')?.value;
+                
+                // ตรวจสอบข้อมูลที่จำเป็น
+                if (!measurementDate || !measurementTime) {
+                    alert('กรุณากรอกวันที่และเวลาที่วัด');
+                    window.isSaving = false;
+                    return;
+                }
+                
+                if (!leftEyeIOP && !rightEyeIOP) {
+                    alert('กรุณากรอก IOP อย่างน้อย 1 ตา');
+                    window.isSaving = false;
+                    return;
+                }
+                
+                // สร้าง object สำหรับบันทึก (ใช้ snake_case ตาม Backend)
+                const updateData = {
+                    measurementDate: measurementDate,
+                    measurementTime: measurementTime,
+                    leftEyeIOP: leftEyeIOP ? parseFloat(leftEyeIOP) : null,
+                    rightEyeIOP: rightEyeIOP ? parseFloat(rightEyeIOP) : null,
+                    measurementMethod: measurementMethod || 'GAT',
+                    notes: notes || ''
+                };
+                    
+                console.log('💾 Saving:', updateData);
+                
+                // ส่งข้อมูลไป API
+                const response = await apiCall(`/iop-measurements/${measurementId}`, {
+                    method: 'PUT',
+                    body: JSON.stringify(updateData)
+                });
+                
+                if (response) {
+                    console.log('✅ Save successful:', response);
+                    showToast('✅ บันทึกการแก้ไขสำเร็จ', 'success');
+                    closeEditIOPModal();
+                    // รีเฟรชข้อมูล IOP ทันที
+                    await loadIOPHistory();
+                }
+                
+            } catch (error) {
+                console.error('❌ Error saving IOP:', error);
+                showToast('❌ เกิดข้อผิดพลาดในการบันทึกข้อมูล', 'error');
+                alert('เกิดข้อผิดพลาดในการบันทึกข้อมูล: ' + error.message);
+            } finally {
+                window.isSaving = false;
+            }
+        }
+
+        function showEditModal() {
+            const modal = document.getElementById('editIOPModal');
+            if (modal) {
+                // 🔍 ตรวจสอบค่าก่อนเปิด modal
+                const measurementId = document.getElementById('editMeasurementId')?.value;
+                console.log('🔍 Before opening modal - Measurement ID:', measurementId);
+                
+                modal.classList.add('show');
+                document.body.style.overflow = 'hidden';
+                
+                // 🔍 ตรวจสอบค่าหลังเปิด modal
+                setTimeout(() => {
+                    const measurementIdAfter = document.getElementById('editMeasurementId')?.value;
+                    console.log('🔍 After opening modal - Measurement ID:', measurementIdAfter);
+                }, 100);
+            } else {
+                alert('ไม่พบฟอร์มแก้ไข');
+            }
+        }
+
+        function closeEditIOPModal() {
+            const modal = document.getElementById('editIOPModal');
+            if (modal) {
+                modal.classList.remove('show');
+                document.body.style.overflow = '';
+                
+                // ⚠️ ย้าย reset ไปหลังจาก modal ปิดแล้ว
+                setTimeout(() => {
+                    document.getElementById('editIOPForm').reset();
+                }, 300); // รอให้ animation เสร็จก่อน
+            }
+        }
+
+        // 2. ฟังก์ชันลบ IOP
+        async function deleteIOPMeasurement(measurementId, measurementDate, leftEyeIOP, rightEyeIOP) {
+            try {
+                console.log('🗑️ Deleting IOP measurement:', measurementId);
+                
+                // Popup ยืนยัน
+                const confirmMessage = `คุณแน่ใจหรือไม่ที่จะลบบันทึกค่า IOP นี้?\n\nวันที่: ${formatThaiDate(measurementDate)}\nตาซ้าย: ${leftEyeIOP !== null && leftEyeIOP !== 'null' ? leftEyeIOP + ' mmHg' : 'ไม่มีข้อมูล'}\nตาขวา: ${rightEyeIOP !== null && rightEyeIOP !== 'null' ? rightEyeIOP + ' mmHg' : 'ไม่มีข้อมูล'}`;
+                
+                const confirmed = confirm(confirmMessage);
+                
+                if (!confirmed) {
+                    console.log('❌ Delete cancelled');
+                    return;
+                }
+
+                showToast('กำลังลบข้อมูล...', 'info');
+
+                const response = await apiCall(`/iop-measurements/${measurementId}`, {
+                    method: 'DELETE'
+                });
+
+                if (response) {
+                    showToast('✅ ลบข้อมูล IOP เรียบร้อยแล้ว', 'success');
+                    await loadIOPHistory();
+                }
+
+            } catch (error) {
+                console.error('❌ Failed to delete:', error);
+                alert('ไม่สามารถลบข้อมูลได้: ' + error.message);
+            }
+        }
+
+        // 3. ฟังก์ชันช่วยเหลือ
+        function formatThaiDate(dateString) {
+            if (!dateString) return '--';
+            
+            try {
+                const date = new Date(dateString);
+                const thaiMonths = [
+                    'มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน',
+                    'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'
+                ];
+                
+                const day = date.getDate();
+                const month = thaiMonths[date.getMonth()];
+                const year = date.getFullYear() + 543;
+                
+                return `${day} ${month} ${year}`;
+            } catch (error) {
+                return dateString;
+            }
+        }
+
+        console.log('✅ IOP Management Functions loaded');
+                
+
 
         async function submitIOP(event) {
             event.preventDefault();
@@ -4283,6 +4688,62 @@
         </div>
     </div>
 
+    <div id="editIOPModal" class="modal">
+        <div class="modal-overlay" onclick="closeEditIOPModal()"></div>
+        <div class="modal-container">
+            <div class="modal-header">
+                <h3 class="modal-title">
+                    <i class="fas fa-edit"></i>
+                    แก้ไขค่า IOP
+                </h3>
+                <button class="modal-close" onclick="closeEditIOPModal()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <div class="modal-body">
+                <form id="editIOPForm">
+                    <input type="hidden" id="editMeasurementId" name="measurementId">
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">วันที่วัด *</label>
+                            <input type="date" class="form-control" id="editMeasurementDate" name="measurementDate" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">เวลาที่วัด *</label>
+                            <input type="time" class="form-control" id="editMeasurementTime" name="measurementTime" required>
+                        </div>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">IOP ตาขวา (mmHg)</label>
+                            <input type="number" class="form-control" id="editRightEyeIOP" name="rightEyeIOP" min="1" max="80" step="0.1">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">IOP ตาซ้าย (mmHg)</label>
+                            <input type="number" class="form-control" id="editLeftEyeIOP" name="leftEyeIOP" min="1" max="80" step="0.1">
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+     </div>
+            
+            <div class="modal-footer">
+                <button type="button" class="btn-cancel" onclick="closeEditIOPModal()">
+                    <i class="fas fa-times"></i>
+                    ยกเลิก
+                </button>
+                <button type="button" class="btn-save" onclick="event.preventDefault(); saveEditedIOP();">
+                    <i class="fas fa-save"></i>
+                    บันทึกการแก้ไข
+                </button>
+            </div>
+        </div>
+    </div>
+                       
+       
 
 </body>
 </html>      
