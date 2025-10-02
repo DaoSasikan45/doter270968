@@ -1624,8 +1624,12 @@
 
             document.querySelectorAll('.tab-content').forEach(content => {
                 content.classList.remove('active');
+                content.style.display = 'none'; // เพิ่มบรรทัดนี้
             });
-            document.getElementById(tabId).classList.add('active');
+            
+            const activeTab = document.getElementById(tabId);
+            activeTab.classList.add('active');
+            activeTab.style.display = 'block'; // เพิ่มบรรทัดนี้
 
             if (selectedPatient) {
                 loadDataForCurrentTab();
@@ -1765,10 +1769,23 @@
             iopChartContainer.innerHTML = getEmptyChartHTML('IOP', true);
 
             try {
+                // ดึงข้อมูล IOP
                 const iopData = await apiCall(`/patients/${patientId}/iop-measurements`);
                 const measurements = iopData?.measurements || [];
                 
-                updateIOPDisplay(measurements);
+                // ดึง Target IOP จาก Treatment Plan
+                let targetIOP = 21; // ค่าเริ่มต้น
+                try {
+                    const treatmentPlan = await apiCall(`/patients/${patientId}/treatment-plan`);
+                    if (treatmentPlan && treatmentPlan.target_iop) {
+                        targetIOP = treatmentPlan.target_iop;
+                    }
+                } catch (e) {
+                    console.log('Using default target IOP:', 21);
+                }
+                
+                // ส่ง targetIOP เข้าไปด้วย
+                updateIOPDisplay(measurements, targetIOP);
                 loadIOPChart(measurements);
                 
             } catch (error) {
@@ -1778,7 +1795,7 @@
             }
         }
 
-        function updateIOPDisplay(iopData) {
+        function updateIOPDisplay(iopData, targetIOP = 21) {
             const iopRightEl = document.getElementById('iopRight');
             const iopLeftEl = document.getElementById('iopLeft');
             const targetIOPEl = document.getElementById('targetIOP');
@@ -1801,14 +1818,14 @@
             }
 
             const latest = iopData.sort((a,b) => new Date(b.measurement_date) - new Date(a.measurement_date))[0];
-            const targetIOP = 21;
 
-            iopRightEl.textContent = latest.right_eye_iop !== null ? latest.right_eye_iop : '--';
-            iopLeftEl.textContent = latest.left_eye_iop !== null ? latest.left_eye_iop : '--';
+            // เพิ่ม parseFloat() ที่นี่
+            iopRightEl.textContent = latest.right_eye_iop !== null ? parseFloat(latest.right_eye_iop) : '--';
+            iopLeftEl.textContent = latest.left_eye_iop !== null ? parseFloat(latest.left_eye_iop) : '--';
             targetIOPEl.textContent = targetIOP;
 
-            const rightStatusClass = getIOPStatusClass(latest.right_eye_iop, targetIOP);
-            const leftStatusClass = getIOPStatusClass(latest.left_eye_iop, targetIOP);
+            const rightStatusClass = getIOPStatusClass(parseFloat(latest.right_eye_iop), targetIOP);
+            const leftStatusClass = getIOPStatusClass(parseFloat(latest.left_eye_iop), targetIOP);
 
             statusRightEl.className = `iop-status ${rightStatusClass}`;
             statusRightEl.textContent = getIOPStatusText(rightStatusClass);
@@ -2246,33 +2263,30 @@
         }
 
         // Empty State HTML Functions
-        function getEmptyIOPCardsHTML(loading = false) {
-            if (loading) {
-                return `<div style="grid-column: 1 / -1; text-align: center; padding: 2rem;"><i class="fas fa-spinner fa-spin"></i> กำลังโหลดค่า IOP...</div>`;
-            }
+        function getEmptyIOPCardsHTML() {
             return `
                 <div class="iop-card">
                     <div class="iop-label">IOP ตาขวา</div>
-                    <div class="iop-value">--</div>
+                    <div class="iop-value" id="iopRight">--</div>
                     <div class="iop-unit">mmHg</div>
-                    <div class="iop-status status-normal">ไม่มีข้อมูล</div>
+                    <div class="iop-status status-normal" id="statusRight">ไม่มีข้อมูล</div>
                 </div>
                 <div class="iop-card">
                     <div class="iop-label">IOP ตาซ้าย</div>
-                    <div class="iop-value">--</div>
+                    <div class="iop-value" id="iopLeft">--</div>
                     <div class="iop-unit">mmHg</div>
-                    <div class="iop-status status-normal">ไม่มีข้อมูล</div>
+                    <div class="iop-status status-normal" id="statusLeft">ไม่มีข้อมูล</div>
                 </div>
                 <div class="iop-card">
-                    <div class="iop-label">Target IOP</div>
-                    <div class="iop-value">--</div>
+                    <div class="iop-label">TARGET IOP</div>
+                    <div class="iop-value" id="targetIOP">--</div>
                     <div class="iop-unit">mmHg</div>
                     <div class="iop-status status-normal">เป้าหมาย</div>
                 </div>
                 <div class="iop-card">
                     <div class="iop-label">วันที่ตรวจล่าสุด</div>
-                    <div class="iop-value" style="font-size: 1.5rem;">--</div>
-                    <div class="iop-unit">วันที่แล้ว</div>
+                    <div class="iop-value" id="lastCheck">--</div>
+                    <div class="iop-unit" id="lastCheckDays">วันที่แล้ว</div>
                     <div class="iop-status status-normal">ยังไม่มีข้อมูล</div>
                 </div>
             `;
