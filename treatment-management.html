@@ -1279,7 +1279,16 @@
                                 <textarea class="form-control" name="specialInstructions" rows="3" placeholder="คำแนะนำเพิ่มเติมเกี่ยวกับการใช้ยา"></textarea>
                             </div>
                         </div>
-
+                        <div class="form-actions" style="margin-top: 2rem; display: flex; gap: 1rem; justify-content: flex-end;">
+                            <button type="button" class="btn-cancel" onclick="clearMedicationForm()">
+                                <i class="fas fa-times"></i>
+                                ล้างข้อมูล
+                            </button>
+                            <button type="submit" class="btn-save">
+                                <i class="fas fa-save"></i>
+                                สั่งยา
+                            </button>
+                        </div>
                         
                     </form>
 
@@ -1363,7 +1372,16 @@
                                 <textarea class="form-control" name="notes" rows="3" placeholder="หมายเหตุเพิ่มเติม เช่น อาการของผู้ป่วย, สภาพแวดล้อมในการวัด"></textarea>
                             </div>
                         </div>
-
+                        <div class="form-actions" style="margin-top: 2rem; display: flex; gap: 1rem; justify-content: flex-end;">
+                            <button type="button" class="btn-cancel" onclick="clearIOPForm()">
+                                <i class="fas fa-times"></i>
+                                ล้างข้อมูล
+                            </button>
+                            <button type="submit" class="btn-save">
+                                <i class="fas fa-save"></i>
+                                บันทึก IOP
+                            </button>
+                        </div>
                         
                     </form>
 
@@ -1474,8 +1492,17 @@
                                 <textarea class="form-control" name="notes" rows="2" placeholder="หมายเหตุเพิ่มเติม"></textarea>
                             </div>
                         </div>
-
-                        <
+                        <div class="form-actions" style="margin-top: 2rem; display: flex; gap: 1rem; justify-content: flex-end;">
+                            <button type="button" class="btn-cancel" onclick="clearSurgeryForm()">
+                                <i class="fas fa-times"></i>
+                                ล้างข้อมูล
+                            </button>
+                            <button type="submit" class="btn-save">
+                                <i class="fas fa-save"></i>
+                                บันทึกการผ่าตัด
+                            </button>
+                        </div>
+                        
                     </form>
 
                     <!-- Surgery History -->
@@ -1568,7 +1595,17 @@
                                 <textarea class="form-control" name="notes" rows="4" placeholder="รายละเอียดแผนการรักษา, เป้าหมาย, ข้อควรระวัง"></textarea>
                             </div>
                         </div>
-
+                        <div class="form-actions" style="margin-top: 2rem; display: flex; gap: 1rem; justify-content: flex-end;">
+                            <button type="button" class="btn-cancel" onclick="clearTreatmentPlanForm()">
+                                <i class="fas fa-times"></i>
+                                ล้างข้อมูล
+                            </button>
+                            <button type="submit" class="btn-save">
+                                <i class="fas fa-save"></i>
+                                บันทึกแผนการรักษา
+                            </button>
+                        </div>
+                    
                         
                     </form>
 
