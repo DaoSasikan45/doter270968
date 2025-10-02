@@ -1294,7 +1294,7 @@
         // API Helper Functions
         async function apiCall(endpoint, options = {}) {
             try {
-                showLoadingOverlay(`กำลังเชื่อมต่อ API: ${endpoint}...`);
+                showLoadingOverlay('กำลังโหลดข้อมูล...');
                 
                 const isFormData = options.body instanceof FormData;
                 const headers = {
@@ -1695,7 +1695,7 @@
     }
 
     try {
-        showLoadingOverlay(`กำลังบันทึกผล ${currentTestType}...`);
+        showLoadingOverlay('กำลังโหลดข้อมูล...');
         
         await apiCall(`/patients/${selectedPatient.patient_id}/special-tests`, { 
             method: 'POST', 
